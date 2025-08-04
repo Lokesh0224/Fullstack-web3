@@ -29,4 +29,15 @@ function cookPopcorn() {
 // Assume pourDrinks is similar or faster/synchronous for simplicity
 
 
-setupMovieNight();
+function main(){
+    console.log("going to kitchen");
+
+}
+
+main()
+    .then(()=>process.exit(0))
+    .catch((error) =>
+        {console.error(error); 
+         process.exit(1)
+        }
+    );
