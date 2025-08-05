@@ -22,7 +22,6 @@ let publicClient
             connectButton.innerHTML= "Connection Failed"
         }
     }
-
     else{
         connectButton.innerHTML = "Please install MetaMask!"
     }
@@ -35,23 +34,30 @@ async function fund(){
     if(typeof window.ethereum !== 'undefined'){
         try{
             walletClient = createWalletClient({transport: custom(window.ethereum)})
-            const [connectedAccount]= await walletClient.requestAddresses()
-            console.log(connectedAccount)
-
+            const [account]= await walletClient.requestAddresses()
             const currentChain = await getCurrentChain(walletClient);
+            console.log("Processing transaction...")
 
             publicClient= createPublicClient({transport: custom(window.ethereum)})
             console.log("Public client intialized")
 
-            const simulationResult= await publicClient.simulateContract({
+            /*this is simulting the contract, if this passes then we have the assurance that actually calling the 
+            contract will pass*/
+            const { request } = await publicClient.simulateContract({//this gives us the request object back
                 address: contractAddress, 
                 abi: coffeeAbi, 
-                account: connectedAccount, 
+                account: account, 
                 functionName: "fund", 
                 chain: currentChain, 
                 value: parseEther(ethAmount)
             })
-            console.log("Simulation successful", simulationResult);
+            console.log("Simulation successful", request);
+
+            /* you're funding the eth to the contract the fund fn will return a transaction
+             hash then it will get mined on the chian*/
+            const hash = await walletClient.writeContract(request);
+            console.log(`transction hash: ${hash}`);
+
         }catch(error){
             console.error("Simulation Failed", error)
         }
