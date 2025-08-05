@@ -20,13 +20,11 @@ let publicClient
         }catch(error){
             console.error("Failed to Connect:", error);
             connectButton.innerHTML= "Connection Failed"
-
         }
     }
 
     else{
         connectButton.innerHTML = "Please install MetaMask!"
-        
     }
 }
 
@@ -37,8 +35,10 @@ async function fund(){
     if(typeof window.ethereum !== 'undefined'){
         try{
             walletClient = createWalletClient({transport: custom(window.ethereum)})
-            const [accAddress]= await walletClient.requestAddresses()
-            console.log(accAddress)
+            const [connectedAccount]= await walletClient.requestAddresses()
+            console.log(connectedAccount)
+
+            const currentChain = await getCurrentChain(walletClient);
 
             publicClient= createPublicClient({transport: custom(window.ethereum)})
             console.log("Public client intialized")
@@ -46,13 +46,14 @@ async function fund(){
             const simulationResult= await publicClient.simulateContract({
                 address: contractAddress, 
                 abi: coffeeAbi, 
-                account: accAddress, 
-                functionName: "fund"
+                account: connectedAccount, 
+                functionName: "fund", 
+                chain: currentChain, 
+                value: parseEther(ethAmount)
             })
             console.log("Simulation successful", simulationResult);
         }catch(error){
             console.error("Simulation Failed", error)
-
         }
     }
     else{
@@ -60,6 +61,25 @@ async function fund(){
     }
 
 
+}
+
+async function getCurrentChain(client) {
+  const chainId = await client.getChainId()
+  const currentChain = defineChain({
+    id: chainId,
+    name: "Custom Chain",
+    nativeCurrency: {
+      name: "Ether",
+      symbol: "ETH",
+      decimals: 18,
+    },
+    rpcUrls: {
+      default: {
+        http: ["http://localhost:8545"],
+      },
+    },
+  })
+  return currentChain
 }
 
 connectButton.onclick = connect
