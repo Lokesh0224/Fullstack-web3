@@ -6,7 +6,7 @@ import Header from "@/components/header";
 
 export const metadata: Metadata = {
   title: "TSender",
-  description: "A simple and fast email sender",
+  description: "A simple and fast token Airdrop sender",
 };
 
 export default function RootLayout(props: {children: ReactNode}) {

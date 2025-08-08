@@ -1,11 +1,11 @@
 "use client" //these are not server side codes, contain hooks etc..
-import {type ReactNode} from "react"
+import {type ReactNode} from "react" //This says anything can be rendered
 import { RainbowKitProvider,  } from "@rainbow-me/rainbowkit"
 import config from "@/rainbowKitConfig"
 import { WagmiProvider } from "wagmi"
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query"
 import { useState } from "react"
-import "@rainbow-me/rainbowkit/styles.css"
+import "@rainbow-me/rainbowkit/styles.css"  
 
 export default function Providers(props: {children: ReactNode}){
     const [queryClient]= useState(() => new QueryClient())
