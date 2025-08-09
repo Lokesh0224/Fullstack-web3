@@ -4,7 +4,7 @@ import InputField from "./ui/InputField";
 import {chainsToTSender, erc20Abi, tsenderAbi} from "@/constants"
 import {useChainId, useConfig, useAccount} from 'wagmi'
 import {readContract} from '@wagmi/core'
-
+import calculateTotal from "@/utils/calculateTotal/calculateTotal"
 export default function AirdropForm(){
 
     const [tokenAddress, setTokenAddress] = useState("")
@@ -13,7 +13,7 @@ export default function AirdropForm(){
     const chainId = useChainId()
     const config = useConfig()
     const account = useAccount()//address of the one who is gonna airdrop to the recipients
-    const total: number = useMemo(() => calculateTotal(amount), [amount])
+    useMemo(() => console.log(calculateTotal(amount)), [amount])
 
     /*  
         tokenAddress	The address of the ERC-20 token contract
