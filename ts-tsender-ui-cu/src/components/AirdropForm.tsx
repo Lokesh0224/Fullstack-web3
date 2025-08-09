@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import InputField from "./ui/InputField";
 import {chainsToTSender, erc20Abi, tsenderAbi} from "@/constants"
 import {useChainId, useConfig, useAccount} from 'wagmi'
@@ -13,6 +13,7 @@ export default function AirdropForm(){
     const chainId = useChainId()
     const config = useConfig()
     const account = useAccount()//address of the one who is gonna airdrop to the recipients
+    const total: number = useMemo(() => calculateTotal(amount), [amount])
 
     /*  
         tokenAddress	The address of the ERC-20 token contract
@@ -45,7 +46,7 @@ export default function AirdropForm(){
         deployed to the chain that is currently connected to. */
         const tSenderAddress = chainsToTSender[chainId]["tsender"]//my contract address deployed on different chains
         const approvedAmount = await getApprovedAmount(tSenderAddress)
-        console.log(approvedAmount)
+        
         
     }
 
