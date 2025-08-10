@@ -30,7 +30,7 @@ export default function AirdropForm(){
         //read from the chain that we've approved enough tokens
         const response = await readContract(config, {
             abi: erc20Abi, //erc20 contract abi
-            address: tokenAddress as `0x${string}` , //address of the ERC-20 token contract that you want to airdrop.
+            address: tokenAddress as `0x${string}` , //address of the ERC-20 token contract that TSender want to airdrop.
             //The allowance is the amount of tokens you've approved a spender to use from your wallet via the approve function.
             functionName: "allowance", 
             /* function allowance(address owner, address spender) external view returns (uint256); 
@@ -68,8 +68,9 @@ export default function AirdropForm(){
                 functionName: "airdripERC20",
                 args: [
                     tokenAddress,
-                    recipients.split(/[\n,]+/).map(addr => addr.trim()).filter(addr => addr !==''), 
-                    amount.split(/[\n,]+/).map(amt => amt.trim()).filter(amt => amt !== ''), 
+                    recipients.split(/[\n,]+/).map(addr => addr.trim()).filter(addr => addr !==''), //Two address
+                    amount.split(/[\n,]+/).map(amt => amt.trim()).filter(amt => amt !== ''), //Two input
+                    //ex: There are two recipients, so the amount inputbox should contain two amount values like 100, 100
                     BigInt(total)
                  ],
             })
@@ -80,7 +81,7 @@ export default function AirdropForm(){
             await writeContractAsync({
                 abi: tsenderAbi,
                 address: tSenderAddress as `0x${string}`, 
-                functionName: "airdripERC20",
+                functionName: "airdropERC20",
                 args: [
                     tokenAddress,
                     recipients.split(/[\n,]+/).map(addr => addr.trim()).filter(addr => addr !==''), 
