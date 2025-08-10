@@ -2,9 +2,10 @@
 import { useState, useMemo } from "react";
 import InputField from "./ui/InputField";
 import {chainsToTSender, erc20Abi, tsenderAbi} from "@/constants"
-import {useChainId, useConfig, useAccount} from 'wagmi'
-import {readContract} from '@wagmi/core'
+import {useChainId, useConfig, useAccount, useWriteContract,} from 'wagmi'
+import {readContract, waitForTransactionReceipt} from '@wagmi/core'
 import calculateTotal from "@/utils/calculateTotal/calculateTotal"
+
 export default function AirdropForm(){
 
     const [tokenAddress, setTokenAddress] = useState("")
@@ -13,7 +14,8 @@ export default function AirdropForm(){
     const chainId = useChainId()
     const config = useConfig()
     const account = useAccount()//address of the one who is gonna airdrop to the recipients
-    useMemo(() => console.log(calculateTotal(amount)), [amount])
+    const total: number = useMemo(() => calculateTotal(amount), [amount])
+    const { data: hash, isPending,  writeContractAsync } = useWriteContract();//dont know how these are the exact return types, patrick just wrote so i did
 
     /*  
         tokenAddress	The address of the ERC-20 token contract
@@ -29,14 +31,14 @@ export default function AirdropForm(){
         const response = await readContract(config, {
             abi: erc20Abi, //erc20 contract abi
             address: tokenAddress as `0x${string}` , //address of the ERC-20 token contract that you want to airdrop.
+            //The allowance is the amount of tokens you've approved a spender to use from your wallet via the approve function.
             functionName: "allowance", 
             /* function allowance(address owner, address spender) external view returns (uint256); 
-
             owner: the address that owns the tokens (i.e., your wallet)
             spender: the address that is allowed to spend those tokens (i.e., your TSender contract)*/
-
             args:[account.address, tSenderAddress as `0x${string}`] // Check how many tokens your wallet (owner) has approved for the TSender contract (spender) to use
         })
+        
         return response as number
 
     }
@@ -46,6 +48,47 @@ export default function AirdropForm(){
         deployed to the chain that is currently connected to. */
         const tSenderAddress = chainsToTSender[chainId]["tsender"]//my contract address deployed on different chains
         const approvedAmount = await getApprovedAmount(tSenderAddress)
+        if(approvedAmount < total){
+            const approvalHash= await writeContractAsync({
+                abi: erc20Abi, 
+                address: tokenAddress as `0x${string}`, 
+                //Allow the TSender contract to spend up to total tokens from my wallet.
+                functionName: 'approve', //“Allow spender to spend up to amount of my tokens on my behalf.”
+                args: [tSenderAddress as `0x${string}`, BigInt(total)]
+            }) 
+            //if we have enough approvedAmount
+            const approvalReceipt = await waitForTransactionReceipt(config, {
+                hash: approvalHash
+            })
+            console.log("Approval confirmed", approvalReceipt)
+
+            await writeContractAsync({
+                abi: tsenderAbi,
+                address: tSenderAddress as `0x${string}`, 
+                functionName: "airdripERC20",
+                args: [
+                    tokenAddress,
+                    recipients.split(/[\n,]+/).map(addr => addr.trim()).filter(addr => addr !==''), 
+                    amount.split(/[\n,]+/).map(amt => amt.trim()).filter(amt => amt !== ''), 
+                    BigInt(total)
+                 ],
+            })
+
+            
+        }
+        else{
+            await writeContractAsync({
+                abi: tsenderAbi,
+                address: tSenderAddress as `0x${string}`, 
+                functionName: "airdripERC20",
+                args: [
+                    tokenAddress,
+                    recipients.split(/[\n,]+/).map(addr => addr.trim()).filter(addr => addr !==''), 
+                    amount.split(/[\n,]+/).map(amt => amt.trim()).filter(amt => amt !== ''), 
+                    BigInt(total)
+                 ],
+            })
+        }
         
         
     }
