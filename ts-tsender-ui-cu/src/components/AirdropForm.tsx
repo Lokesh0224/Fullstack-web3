@@ -9,9 +9,28 @@ import Spinner from './ui/spinner'
 
 export default function AirdropForm(){
 
-    const [tokenAddress, setTokenAddress] = useState("")
-    const [recipients, setRecipients] = useState("")
-    const [amount, setAmount] = useState("")
+    /* instead of rendering with an empty value first and then 
+    updating the useEffect you initialize your state directly 
+    from the localstorage */
+    const [tokenAddress, setTokenAddress] = useState(() => {
+        if(typeof window !== 'undefined'){
+            return localStorage.getItem('tSenderTokenAddress') || ""
+        }
+        return ""
+    })
+    const [recipients, setRecipients] = useState(() => {
+        if(typeof window !== 'undefined'){
+            return localStorage.getItem('tSenderRecipients') || ""
+        }
+        return ""
+    })
+    const [amount, setAmount] = useState(() => {
+        if(typeof window !== 'undefined'){
+            return localStorage.getItem('tSenderAmount') || ""
+        }
+        return ""
+    })
+    
     const chainId = useChainId()
     const config = useConfig()
     const account = useAccount()//address of the one who is gonna airdrop to the recipients
@@ -32,17 +51,6 @@ export default function AirdropForm(){
     useEffect(() => {
         if(amount) localStorage.setItem('tSenderAmount', amount )
     }, [amount])
-
-    //Retriving the data on the component mount
-    useEffect(() => {
-        const savedAddress = localStorage.getItem('tSenderTokenAddress')
-        const savedRecipients = localStorage.getItem('tSenderRecipients')
-        const savedAmount = localStorage.getItem('tSenderAmount')
-
-        if(savedAddress) setTokenAddress(savedAddress);
-        if(savedRecipients) setRecipients(savedRecipients);
-        if(savedAmount) setAmount(savedAmount)
-    }, [])
 
     /*  
         tokenAddress	The address of the ERC-20 token contract
@@ -136,11 +144,20 @@ export default function AirdropForm(){
                 await waitForTransactionReceipt(config, { hash: airdropResult });
                 setIsWaitingMining(false);
             }
-        }catch(error){
+        }catch (error: any) {
+            setIsWaitingWalletConfirmation(false);
+            setIsWaitingMining(false);
             console.error("Transaction failed or was cancelled:", error);
+
+            if (error.code === 'ACTION_REJECTED' || error.message?.includes('User rejected')) {
+                alert("Transaction was cancelled by the user.");
+            } else {
+                alert("Something went wrong. Please try again.");
+            }
         }finally{
             setIsWaitingWalletConfirmation(false);
             setIsWaitingMining(false);
+            
         }
         
     }
@@ -176,9 +193,8 @@ export default function AirdropForm(){
                 className={`py-2.5 px-5 me-2 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700 inline-flex items-center
                     ${isWaitingWalletConfirmation || isWaitingMining ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:scale-95'}`}
                 >{
-                    (isWaitingWalletConfirmation && <><Spinner /> Confirming in wallet... </>) ||
-                    (isWaitingMining && <><Spinner /> Mining transaction... </>) ||
-                    'SendTokens'
+                    isWaitingMining ? (<><Spinner/> Mining transaction... </>) : isWaitingWalletConfirmation ? 
+                                      (<><Spinner/> Conforming in wallet... </>) : ('SendTokens')
                 }
             </button>
 
