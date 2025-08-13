@@ -1,5 +1,5 @@
 "use client"
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import InputField from "./ui/InputField";
 import {chainsToTSender, erc20Abi, tsenderAbi} from "@/constants"
 import {useChainId, useConfig, useAccount, useWriteContract,} from 'wagmi'
@@ -20,6 +20,29 @@ export default function AirdropForm(){
     const [isWaitingWalletConfirmation, setIsWaitingWalletConfirmation] = useState(false);
     const [isWaitingMining, setIsWaitingMining] = useState(false);
 
+    //Setting the localStorage
+    useEffect(() => {
+        if(tokenAddress) localStorage.setItem('tSenderTokenAddress', tokenAddress)
+    }, [tokenAddress])
+
+    useEffect(() => {
+        if(recipients) localStorage.setItem('tSenderRecipients', recipients)
+    }, [recipients])
+     
+    useEffect(() => {
+        if(amount) localStorage.setItem('tSenderAmount', amount )
+    }, [amount])
+
+    //Retriving the data on the component mount
+    useEffect(() => {
+        const savedAddress = localStorage.getItem('tSenderTokenAddress')
+        const savedRecipients = localStorage.getItem('tSenderRecipients')
+        const savedAmount = localStorage.getItem('tSenderAmount')
+
+        if(savedAddress) setTokenAddress(savedAddress);
+        if(savedRecipients) setRecipients(savedRecipients);
+        if(savedAmount) setAmount(savedAmount)
+    }, [])
 
     /*  
         tokenAddress	The address of the ERC-20 token contract
@@ -44,76 +67,81 @@ export default function AirdropForm(){
         })
         
         return response as number
-
     }
 
     async function handleSubmit(){
         /* address of the Tsender airdrop smart contract that is 
         deployed to the chain that is currently connected to. */
-        const tSenderAddress = chainsToTSender[chainId]["tsender"]//my contract address deployed on different chains
-        const approvedAmount = await getApprovedAmount(tSenderAddress)
-        if(approvedAmount < total){
+        try{
+            const tSenderAddress = chainsToTSender[chainId]["tsender"]//my contract address deployed on different chains
+            const approvedAmount = await getApprovedAmount(tSenderAddress)
+            if(approvedAmount < total){
 
-            setIsWaitingWalletConfirmation(true);
-            const approvalHash= await writeContractAsync({
-                abi: erc20Abi, 
-                address: tokenAddress as `0x${string}`, 
-                //Allow the TSender contract to spend up to total tokens from my wallet.
-                functionName: 'approve', //“Allow spender to spend up to amount of my tokens on my behalf.”
-                args: [tSenderAddress as `0x${string}`, BigInt(total)]
-            }) 
-            setIsWaitingWalletConfirmation(false)
-            setIsWaitingMining(true);
-            //if we have enough approvedAmount
-            const approvalReceipt = await waitForTransactionReceipt(config, {
-                hash: approvalHash
-            })
-            console.log("Approval confirmed", approvalReceipt)
+                setIsWaitingWalletConfirmation(true);
+                const approvalHash= await writeContractAsync({
+                    abi: erc20Abi, 
+                    address: tokenAddress as `0x${string}`, 
+                    //Allow the TSender contract to spend up to total tokens from my wallet.
+                    functionName: 'approve', //“Allow spender to spend up to amount of my tokens on my behalf.”
+                    args: [tSenderAddress as `0x${string}`, BigInt(total)]
+                }) 
+                setIsWaitingWalletConfirmation(false)
+                setIsWaitingMining(true);
+                //if we have enough approvedAmount
+                const approvalReceipt = await waitForTransactionReceipt(config, {
+                    hash: approvalHash
+                })
+                console.log("Approval confirmed", approvalReceipt)
 
-            setIsWaitingMining(false);
-            
+                setIsWaitingMining(false);
+                
 
-            setIsWaitingWalletConfirmation(true);
-            const airdropResult=await writeContractAsync({
-                abi: tsenderAbi,
-                address: tSenderAddress as `0x${string}`, 
-                functionName: "airdropERC20",
-                args: [
-                    tokenAddress,
-                    recipients.split(/[\n,]+/).map(addr => addr.trim()).filter(addr => addr !==''), //Two address
-                    amount.split(/[\n,]+/).map(amt => amt.trim()).filter(amt => amt !== ''), //Two input
-                    //ex: There are two recipients, so the amount inputbox should contain two amount values like 100, 100
-                    BigInt(total)
-                 ],
-            })
-            console.log('The airdropResult is', airdropResult)
+                setIsWaitingWalletConfirmation(true);
+                const airdropResult=await writeContractAsync({
+                    abi: tsenderAbi,
+                    address: tSenderAddress as `0x${string}`, 
+                    functionName: "airdropERC20",
+                    args: [
+                        tokenAddress,
+                        recipients.split(/[\n,]+/).map(addr => addr.trim()).filter(addr => addr !==''), //Two address
+                        amount.split(/[\n,]+/).map(amt => amt.trim()).filter(amt => amt !== ''), //Two input
+                        //ex: There are two recipients, so the amount inputbox should contain two amount values like 100, 100
+                        BigInt(total)
+                    ],
+                })
+                console.log('The airdropResult is', airdropResult)
+                setIsWaitingWalletConfirmation(false);
+
+                setIsWaitingMining(true);
+                await waitForTransactionReceipt(config, { hash: airdropResult });
+                setIsWaitingMining(false);
+            }
+            else{
+                setIsWaitingWalletConfirmation(true)
+                const airdropResult= await writeContractAsync({
+                    abi: tsenderAbi,
+                    address: tSenderAddress as `0x${string}`, 
+                    functionName: "airdropERC20",
+                    args: [
+                        tokenAddress,
+                        recipients.split(/[\n,]+/).map(addr => addr.trim()).filter(addr => addr !==''), 
+                        amount.split(/[\n,]+/).map(amt => amt.trim()).filter(amt => amt !== ''), 
+                        BigInt(total)
+                    ],
+                })
+                console.log('The airdropResult is', airdropResult)
+                setIsWaitingWalletConfirmation(false)
+
+                setIsWaitingMining(true);
+                await waitForTransactionReceipt(config, { hash: airdropResult });
+                setIsWaitingMining(false);
+            }
+        }catch(error){
+            console.error("Transaction failed or was cancelled:", error);
+        }finally{
             setIsWaitingWalletConfirmation(false);
-
-            setIsWaitingMining(true);
-            await waitForTransactionReceipt(config, { hash: airdropResult });
             setIsWaitingMining(false);
         }
-        else{
-            setIsWaitingWalletConfirmation(true)
-            const airdropResult= await writeContractAsync({
-                abi: tsenderAbi,
-                address: tSenderAddress as `0x${string}`, 
-                functionName: "airdropERC20",
-                args: [
-                    tokenAddress,
-                    recipients.split(/[\n,]+/).map(addr => addr.trim()).filter(addr => addr !==''), 
-                    amount.split(/[\n,]+/).map(amt => amt.trim()).filter(amt => amt !== ''), 
-                    BigInt(total)
-                 ],
-            })
-            console.log('The airdropResult is', airdropResult)
-            setIsWaitingWalletConfirmation(false)
-
-            setIsWaitingMining(true);
-            await waitForTransactionReceipt(config, { hash: airdropResult });
-            setIsWaitingMining(false);
-        }
-        
         
     }
 
@@ -145,12 +173,13 @@ export default function AirdropForm(){
             <button 
                 onClick={handleSubmit} 
                 disabled={isWaitingWalletConfirmation || isWaitingMining}
-                className={`mt-4 px-6 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-200 ease-in-out focus:outline-none
+                className={`py-2.5 px-5 me-2 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700 inline-flex items-center
                     ${isWaitingWalletConfirmation || isWaitingMining ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:scale-95'}`}
-                >
-                {(isWaitingWalletConfirmation && <>Confirming in wallet... <Spinner /></>) ||
-                (isWaitingMining && <>Mining transaction... <Spinner /></>) ||
-                'SendTokens'}
+                >{
+                    (isWaitingWalletConfirmation && <><Spinner /> Confirming in wallet... </>) ||
+                    (isWaitingMining && <><Spinner /> Mining transaction... </>) ||
+                    'SendTokens'
+                }
             </button>
 
 
