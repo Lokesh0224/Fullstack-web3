@@ -24,6 +24,7 @@ export default function AirdropForm(){
         }
         return ""
     })
+    
     const [amount, setAmount] = useState(() => {
         if(typeof window !== 'undefined'){
             return localStorage.getItem('tSenderAmount') || ""
@@ -42,16 +43,34 @@ export default function AirdropForm(){
     //Setting the localStorage
     useEffect(() => {
         if(tokenAddress) localStorage.setItem('tSenderTokenAddress', tokenAddress)
+        else localStorage.removeItem('tSenderTokenAddress')
+        
     }, [tokenAddress])
-
+        
     useEffect(() => {
         if(recipients) localStorage.setItem('tSenderRecipients', recipients)
+        else localStorage.removeItem('tSenderRecipients')
     }, [recipients])
      
     useEffect(() => {
         if(amount) localStorage.setItem('tSenderAmount', amount )
+        else localStorage.removeItem('tSenderAmount')
     }, [amount])
 
+    useEffect(() => {
+    if (!account.address) {
+        console.log("Account disconnected or not connected");
+        setTokenAddress("");
+        setRecipients("");
+        setAmount("");
+
+        localStorage.removeItem('tSenderTokenAddress');
+        localStorage.removeItem('tSenderRecipients');
+        localStorage.removeItem('tSenderAmount');
+    } else {
+        console.log("Account connected:", account.address);
+    }
+    }, [account.address]);
     /*  
         tokenAddress	The address of the ERC-20 token contract
         account.address	Your wallet address (the token owner)
