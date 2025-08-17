@@ -2,9 +2,9 @@ name: marketplaceIndexer
 project_type: no-code
 config: {}
 networks:
-- name: ethereum
-  chain_id: 1
-  rpc: https://mainnet.gateway.tenderly.co
+- name: anvil
+  chain_id: 31337
+  rpc: http://127.0.0.1:8545
 storage:
   postgres:
     enabled: true
@@ -14,13 +14,13 @@ storage:
 native_transfers:
   enabled: false
 contracts:
-- name: RocketPoolETH
+- name: NftMarketplace
   details:
-  - network: ethereum
-    address: 0xae78736cd615f374d3085123a210448e74fc6393
-    start_block: '18900000'
-    end_block: '19000000'
-  abi: ./abis/RocketTokenRETH.abi.json
+  - network: anvil
+    address: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+    start_block: '0'
+  abi: ./abis/NftMarketplace.abi.json
   include_events:
-  - Transfer
-  - Approval
+  - ItemListed
+  - ItemCanceled
+  - ItemBought
