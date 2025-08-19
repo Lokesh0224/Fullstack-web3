@@ -3,6 +3,86 @@ import { useMemo } from "react"
 import NFTBox from "./NFTBox"
 import Link from "next/link"
 
+interface NFTItem {
+    rindexerId: string
+    seller: string
+    nftAddress: string
+    price: string
+    tokenId: string
+    contractAddress: string
+    txHash: string
+    blockNumber: string
+}
+
+interface BoughtCancelled{
+    nftAddress: string
+    tokenId: string
+}
+
+interface NFTQueryResponse{
+    data: {
+        allItemListeds: {
+            nodes: NFTItem[]
+        }, 
+        allItemCanceleds:{
+            nodes: BoughtCancelled[]
+        }, 
+        allItemBoughts: {
+            nodes: BoughtCancelled[]
+        }
+
+    }
+}
+
+const GET_RECENT_NFTS = `
+  query GetMarketplaceData {
+    # Fetch the latest 20 listed items, newest first
+    allItemListeds(first: 20, orderBy: [BLOCK_NUMBER_DESC, TX_INDEX_DESC]) {
+      nodes {
+        rindexerId      # Unique ID from rindexer
+        seller
+        nftAddress
+        price
+        tokenId
+        contractAddress # Smart contract emitting the event
+        txHash
+        blockNumber
+      }
+    }
+    # Fetch all cancellation events (for filtering)
+    allItemCanceleds { # Matches the event name indexed by rindexer
+      nodes {
+        nftAddress
+        tokenId
+      }
+    }
+    # Fetch all purchase events (for filtering)
+    allItemBoughts { # Matches the event name indexed by rindexer
+      nodes {
+        tokenId
+        nftAddress
+      }
+    }
+  }
+`;
+
+async function fetchNFTs() : Promise<NFTQueryResponse> { 
+    const response = await fetch("/api/graphql", {
+        method: "POST", 
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            query: GET_RECENT_NFTS,
+        }),
+    })
+    return response.json()
+}
+
+console.log(await fetchNFTs())
+
+
+
 // Main component that uses the custom hook
 export default function RecentlyListedNFTs() {
     return (
